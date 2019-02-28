@@ -88,11 +88,67 @@ function main() {
     uniform float height;                      
     void main()                                         
     {                     
-      width;
-      height;         
+      vec4 pixel = texture2D(uSampler1, vTextureCoord);              
+      vec4 n[9];
+
+      float w = 1.0 / width;
+      float h = 1.0 / height;
+
+      n[0] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 0.0) );
+      n[1] = texture2D(uSampler1, vTextureCoord + vec2(w, 0.0) );
+      n[2] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 0.0) );
+      n[3] = texture2D(uSampler1, vTextureCoord + vec2(0.0*w, h) );
+      n[4] = texture2D(uSampler1, vTextureCoord + vec2(w, h) );
+      n[5] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, h) );
+      n[6] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 2.0*h) );
+      n[7] = texture2D(uSampler1, vTextureCoord + vec2(w, 2.0*h) );
+      n[8] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 2.0*h) );
       vec4 color1 = texture2D(uSampler1, vTextureCoord) * 0.5;    
-      vec4 color2 = texture2D(uSampler2, vTextureCoord) * 0.5;                                     
-      gl_FragColor = color1 + color2;   
+      vec4 color2 = texture2D(uSampler2, vTextureCoord) * 0.5;      
+      vec4 sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
+      vec4 sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
+
+      float avg_x = (sobel_x.r + sobel_x.g + sobel_x.b) / 3.0;
+      float avg_y = (sobel_y.r + sobel_y.g + sobel_y.b) / 3.0;
+
+      sobel_x.r = avg_x;
+      sobel_x.g = avg_x;
+      sobel_x.b = avg_x;
+      sobel_y.r = avg_y;
+      sobel_y.g = avg_y;
+      sobel_y.b = avg_y;
+
+      vec3 sobel1 = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
+
+      pixel = texture2D(uSampler2, vTextureCoord);          
+
+      n[0] = texture2D(uSampler2, vTextureCoord + vec2(0.0, 0.0) );
+      n[1] = texture2D(uSampler2, vTextureCoord + vec2(w, 0.0) );
+      n[2] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, 0.0) );
+      n[3] = texture2D(uSampler2, vTextureCoord + vec2(0.0*w, h) );
+      n[4] = texture2D(uSampler2, vTextureCoord + vec2(w, h) );
+      n[5] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, h) );
+      n[6] = texture2D(uSampler2, vTextureCoord + vec2(0.0, 2.0*h) );
+      n[7] = texture2D(uSampler2, vTextureCoord + vec2(w, 2.0*h) );
+      n[8] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, 2.0*h) );
+      color1 = texture2D(uSampler2, vTextureCoord) * 0.5;    
+      color2 = texture2D(uSampler2, vTextureCoord) * 0.5;      
+      sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
+      sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
+
+      avg_x = (sobel_x.r + sobel_x.g + sobel_x.b) / 3.0;
+      avg_y = (sobel_y.r + sobel_y.g + sobel_y.b) / 3.0;
+
+      sobel_x.r = avg_x;
+      sobel_x.g = avg_x;
+      sobel_x.b = avg_x;
+      sobel_y.r = avg_y;
+      sobel_y.g = avg_y;
+      sobel_y.b = avg_y;
+
+      vec3 sobel2 = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
+
+      gl_FragColor = vec4(sobel1*0.5 + sobel2*0.5, 1.0);   
     }
   `;
 
