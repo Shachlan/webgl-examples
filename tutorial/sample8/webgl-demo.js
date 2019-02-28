@@ -25,7 +25,6 @@ function main() {
   const vsSource = `
     attribute vec4 aVertexPosition;
     attribute vec2 aTextureCoord;
-    attribute vec3 aVertexNormal;
 
     uniform mat4 uNormalMatrix;
     uniform mat4 uModelViewMatrix;
@@ -35,11 +34,6 @@ function main() {
     varying highp vec3 vLighting;
 
     void main(void) {
-      uNormalMatrix;
-      uProjectionMatrix;
-      uModelViewMatrix;
-      vLighting;
-      aVertexNormal;
       gl_Position = aVertexPosition;
       vTextureCoord = aTextureCoord;
     }
@@ -72,7 +66,6 @@ function main() {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-      vertexNormal: gl.getAttribLocation(shaderProgram, "aVertexNormal"),
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
@@ -195,33 +188,6 @@ function initBuffers(gl) {
 
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-  // Set up the normals for the vertices, so that we can compute lighting.
-
-  const normalBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-
-  const vertexNormals = [
-    // Front
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0
-  ];
-
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(vertexNormals),
-    gl.STATIC_DRAW
-  );
-
   // Now set up the texture coordinates for the faces.
 
   const textureCoordBuffer = gl.createBuffer();
@@ -267,7 +233,6 @@ function initBuffers(gl) {
 
   return {
     position: positionBuffer,
-    normal: normalBuffer,
     textureCoord: textureCoordBuffer,
     indices: indexBuffer
   };
@@ -433,26 +398,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
       offset
     );
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
-  }
-
-  // Tell WebGL how to pull out the normals from
-  // the normal buffer into the vertexNormal attribute.
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
-    gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexNormal,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset
-    );
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
   }
 
   // Tell WebGL which indices to use to index the vertices
