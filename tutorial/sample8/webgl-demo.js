@@ -81,24 +81,24 @@ function main() {
 
   const blendingFragmentShader = `    
     precision mediump float;                            
-    varying vec2 v_texCoord;                            
+    varying vec2 vTextureCoord;                            
     uniform sampler2D uSampler1;                        
-    uniform sampler2D uSampler2;                        
+    uniform sampler2D uSampler2;                         
+    uniform float width;  
+    uniform float height;                      
     void main()                                         
-    {                              
-      vec4 color1 = texture2D(uSampler1, v_texCoord) * 0.5;    
-      vec4 color2 = texture2D(uSampler2, v_texCoord) * 0.5;                                     
+    {                     
+      width;
+      height;         
+      vec4 color1 = texture2D(uSampler1, vTextureCoord) * 0.5;    
+      vec4 color2 = texture2D(uSampler2, vTextureCoord) * 0.5;                                     
       gl_FragColor = color1 + color2;   
     }
   `;
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
-  const shaderProgram = initShaderProgram(
-    gl,
-    vsSource,
-    edgeDetectFragmentShader
-  );
+  const shaderProgram = initShaderProgram(gl, vsSource, blendingFragmentShader);
 
   // Collect all the info needed to use the shader program.
   // Look up which attributes our shader program is using
