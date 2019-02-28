@@ -26,10 +26,7 @@ function main() {
     attribute vec4 aVertexPosition;
     attribute vec2 aTextureCoord;
 
-    uniform mat4 uNormalMatrix;
-
     varying highp vec2 vTextureCoord;
-    varying highp vec3 vLighting;
 
     void main(void) {
       gl_Position = aVertexPosition;
@@ -41,13 +38,10 @@ function main() {
 
   const fsSource = `
     varying highp vec2 vTextureCoord;
-    varying highp vec3 vLighting;
 
     uniform sampler2D uSampler;
 
     void main(void) {
-      vLighting;
-
       gl_FragColor = texture2D(uSampler, vTextureCoord);
     }
   `;
@@ -67,7 +61,6 @@ function main() {
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
-      normalMatrix: gl.getUniformLocation(shaderProgram, "uNormalMatrix"),
       uSampler: gl.getUniformLocation(shaderProgram, "uSampler")
     }
   };
@@ -307,8 +300,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  const normalMatrix = mat4.create();
-
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
   {
@@ -355,12 +346,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
   // Tell WebGL to use our program when drawing
 
   gl.useProgram(programInfo.program);
-
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.normalMatrix,
-    false,
-    normalMatrix
-  );
 
   // Specify the texture to map onto the faces.
 
