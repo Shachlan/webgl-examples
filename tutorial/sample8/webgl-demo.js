@@ -181,7 +181,6 @@ function initBuffers(gl) {
   // Now create an array of positions for the cube.
 
   const positions = [
-    // Front face
     -1.0,
     -1.0,
     1.0,
@@ -193,77 +192,7 @@ function initBuffers(gl) {
     1.0,
     -1.0,
     1.0,
-    1.0,
-
-    // Back face
-    -1.0,
-    -1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    -1.0,
-
-    // Top face
-    -1.0,
-    1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    -1.0,
-
-    // Bottom face
-    -1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    -1.0,
-    1.0,
-
-    // Right face
-    1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-
-    // Left face
-    -1.0,
-    -1.0,
-    -1.0,
-    -1.0,
-    -1.0,
-    1.0,
-    -1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-    -1.0
+    1.0
   ];
 
   // Now pass the list of positions into WebGL to build the
@@ -290,77 +219,7 @@ function initBuffers(gl) {
     1.0,
     0.0,
     0.0,
-    1.0,
-
-    // Back
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-
-    // Top
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-
-    // Bottom
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-
-    // Right
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-
-    // Left
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0,
-    -1.0,
-    0.0,
-    0.0
+    1.0
   ];
 
   gl.bufferData(
@@ -376,59 +235,14 @@ function initBuffers(gl) {
 
   const textureCoordinates = [
     // Front
-    0.0,
-    0.0,
-    1.0,
-    0.0,
     1.0,
     1.0,
     0.0,
     1.0,
-    // Back
     0.0,
     0.0,
     1.0,
-    0.0,
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    // Top
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    // Bottom
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    // Right
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    // Left
-    0.0,
-    0.0,
-    1.0,
-    0.0,
-    1.0,
-    1.0,
-    0.0,
-    1.0
+    0.0
   ];
 
   gl.bufferData(
@@ -447,44 +261,7 @@ function initBuffers(gl) {
   // indices into the vertex array to specify each triangle's
   // position.
 
-  const indices = [
-    0,
-    1,
-    2,
-    0,
-    2,
-    3, // front
-    4,
-    5,
-    6,
-    4,
-    6,
-    7, // back
-    8,
-    9,
-    10,
-    8,
-    10,
-    11, // top
-    12,
-    13,
-    14,
-    12,
-    14,
-    15, // bottom
-    16,
-    17,
-    18,
-    16,
-    18,
-    19, // right
-    20,
-    21,
-    22,
-    20,
-    22,
-    23 // left
-  ];
+  const indices = [0, 1, 2, 0, 2, 3];
 
   // Now send the element array to GL
 
@@ -721,15 +498,11 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
   gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
   {
-    const vertexCount = 36;
+    const vertexCount = 6;
     const type = gl.UNSIGNED_SHORT;
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
-
-  // Update the rotation for the next draw
-
-  cubeRotation += deltaTime;
 }
 
 //
