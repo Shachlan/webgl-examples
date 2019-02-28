@@ -28,7 +28,6 @@ function main() {
 
     uniform mat4 uNormalMatrix;
     uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
 
     varying highp vec2 vTextureCoord;
     varying highp vec3 vLighting;
@@ -69,10 +68,6 @@ function main() {
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram,
-        "uProjectionMatrix"
-      ),
       modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
       normalMatrix: gl.getUniformLocation(shaderProgram, "uNormalMatrix"),
       uSampler: gl.getUniformLocation(shaderProgram, "uSampler")
@@ -325,11 +320,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
@@ -408,12 +398,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
   gl.useProgram(programInfo.program);
 
   // Set the shader uniforms
-
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
-    false,
-    projectionMatrix
-  );
   gl.uniformMatrix4fv(
     programInfo.uniformLocations.modelViewMatrix,
     false,
