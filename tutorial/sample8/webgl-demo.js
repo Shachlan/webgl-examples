@@ -36,19 +36,55 @@ function main() {
 
   // Fragment shader program
 
-  const fsSource = `
-    varying highp vec2 vTextureCoord;
+  const edgeDetectFragmentShader = `
+    precision mediump float;                            
+    varying vec2 vTextureCoord;                            
+    uniform sampler2D uSampler;                        
+    uniform float width;  
+    uniform float height;  
+    void main()                                         
+    {          
+      vec4 pixel = texture2D(uSampler, vTextureCoord);              
+      vec4 n[9];
 
-    uniform sampler2D uSampler;
+      float w = 1.0 / width;
+      float h = 1.0 / height;
 
-    void main(void) {
-      gl_FragColor = texture2D(uSampler, vTextureCoord);
-    }
+      n[0] = texture2D(uSampler, vTextureCoord + vec2(0.0, 0.0) );
+      n[1] = texture2D(uSampler, vTextureCoord + vec2(w, 0.0) );
+      n[2] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, 0.0) );
+      n[3] = texture2D(uSampler, vTextureCoord + vec2(0.0*w, h) );
+      n[4] = texture2D(uSampler, vTextureCoord + vec2(w, h) );
+      n[5] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, h) );
+      n[6] = texture2D(uSampler, vTextureCoord + vec2(0.0, 2.0*h) );
+      n[7] = texture2D(uSampler, vTextureCoord + vec2(w, 2.0*h) );
+      n[8] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, 2.0*h) );
+
+      vec4 sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
+      vec4 sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
+
+      float avg_x = (sobel_x.r + sobel_x.g + sobel_x.b) / 3.0;
+      float avg_y = (sobel_y.r + sobel_y.g + sobel_y.b) / 3.0;
+
+      sobel_x.r = avg_x;
+      sobel_x.g = avg_x;
+      sobel_x.b = avg_x;
+      sobel_y.r = avg_y;
+      sobel_y.g = avg_y;
+      sobel_y.b = avg_y;
+
+      vec3 sobel = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
+      gl_FragColor = vec4( sobel, 1.0 );   
+    }     
   `;
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
-  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  const shaderProgram = initShaderProgram(
+    gl,
+    vsSource,
+    edgeDetectFragmentShader
+  );
 
   // Collect all the info needed to use the shader program.
   // Look up which attributes our shader program is using
@@ -61,7 +97,9 @@ function main() {
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
-      uSampler: gl.getUniformLocation(shaderProgram, "uSampler")
+      uSampler: gl.getUniformLocation(shaderProgram, "uSampler"),
+      width: gl.getUniformLocation(shaderProgram, "width"),
+      height: gl.getUniformLocation(shaderProgram, "height")
     }
   };
 
@@ -347,6 +385,9 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 
   gl.useProgram(programInfo.program);
 
+  gl.uniform1f(programInfo.uniformLocations.width, gl.canvas.width);
+  gl.uniform1f(programInfo.uniformLocations.height, gl.canvas.height);
+
   // Specify the texture to map onto the faces.
 
   // Tell WebGL we want to affect texture unit 0
@@ -384,7 +425,7 @@ function initShaderProgram(gl, vsSource, fsSource) {
 
   if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
     alert(
-      "Unable to initialize the shader program: " +
+      `Unable to initialize the shader program:` +
         gl.getProgramInfoLog(shaderProgram)
     );
     return null;
