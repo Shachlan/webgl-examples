@@ -27,7 +27,6 @@ function main() {
     attribute vec2 aTextureCoord;
 
     uniform mat4 uNormalMatrix;
-    uniform mat4 uModelViewMatrix;
 
     varying highp vec2 vTextureCoord;
     varying highp vec3 vLighting;
@@ -68,7 +67,6 @@ function main() {
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
       normalMatrix: gl.getUniformLocation(shaderProgram, "uNormalMatrix"),
       uSampler: gl.getUniformLocation(shaderProgram, "uSampler")
     }
@@ -309,46 +307,7 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Create a perspective matrix, a special matrix that is
-  // used to simulate the distortion of perspective in a camera.
-  // Our field of view is 45 degrees, with a width/height
-  // ratio that matches the display size of the canvas
-  // and we only want to see objects between 0.1 units
-  // and 100 units away from the camera.
-
-  const fieldOfView = (45 * Math.PI) / 180; // in radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-
-  // Set the drawing position to the "identity" point, which is
-  // the center of the scene.
-  const modelViewMatrix = mat4.create();
-
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
-
-  mat4.translate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -6.0]
-  ); // amount to translate
-  mat4.rotate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to rotate
-    cubeRotation, // amount to rotate in radians
-    [0, 0, 1]
-  ); // axis to rotate around (Z)
-  mat4.rotate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to rotate
-    cubeRotation * 0.7, // amount to rotate in radians
-    [0, 1, 0]
-  ); // axis to rotate around (X)
-
   const normalMatrix = mat4.create();
-  mat4.invert(normalMatrix, modelViewMatrix);
-  mat4.transpose(normalMatrix, normalMatrix);
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
@@ -397,12 +356,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 
   gl.useProgram(programInfo.program);
 
-  // Set the shader uniforms
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
-    false,
-    modelViewMatrix
-  );
   gl.uniformMatrix4fv(
     programInfo.uniformLocations.normalMatrix,
     false,
