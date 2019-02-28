@@ -1,4 +1,3 @@
-var cubeRotation = 0.0;
 // will set to true when video can be copied to texture
 var copyVideo = false;
 
@@ -39,26 +38,28 @@ function main() {
   const edgeDetectFragmentShader = `
     precision mediump float;                            
     varying vec2 vTextureCoord;                            
-    uniform sampler2D uSampler;                        
+    uniform sampler2D uSampler1;                             
+    uniform sampler2D uSampler2;                        
     uniform float width;  
     uniform float height;  
     void main()                                         
     {          
-      vec4 pixel = texture2D(uSampler, vTextureCoord);              
+      uSampler2;
+      vec4 pixel = texture2D(uSampler1, vTextureCoord);              
       vec4 n[9];
 
       float w = 1.0 / width;
       float h = 1.0 / height;
 
-      n[0] = texture2D(uSampler, vTextureCoord + vec2(0.0, 0.0) );
-      n[1] = texture2D(uSampler, vTextureCoord + vec2(w, 0.0) );
-      n[2] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, 0.0) );
-      n[3] = texture2D(uSampler, vTextureCoord + vec2(0.0*w, h) );
-      n[4] = texture2D(uSampler, vTextureCoord + vec2(w, h) );
-      n[5] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, h) );
-      n[6] = texture2D(uSampler, vTextureCoord + vec2(0.0, 2.0*h) );
-      n[7] = texture2D(uSampler, vTextureCoord + vec2(w, 2.0*h) );
-      n[8] = texture2D(uSampler, vTextureCoord + vec2(2.0*w, 2.0*h) );
+      n[0] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 0.0) );
+      n[1] = texture2D(uSampler1, vTextureCoord + vec2(w, 0.0) );
+      n[2] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 0.0) );
+      n[3] = texture2D(uSampler1, vTextureCoord + vec2(0.0*w, h) );
+      n[4] = texture2D(uSampler1, vTextureCoord + vec2(w, h) );
+      n[5] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, h) );
+      n[6] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 2.0*h) );
+      n[7] = texture2D(uSampler1, vTextureCoord + vec2(w, 2.0*h) );
+      n[8] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 2.0*h) );
 
       vec4 sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
       vec4 sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
@@ -76,6 +77,19 @@ function main() {
       vec3 sobel = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
       gl_FragColor = vec4( sobel, 1.0 );   
     }     
+  `;
+
+  const blendingFragmentShader = `    
+    precision mediump float;                            
+    varying vec2 v_texCoord;                            
+    uniform sampler2D uSampler1;                        
+    uniform sampler2D uSampler2;                        
+    void main()                                         
+    {                              
+      vec4 color1 = texture2D(uSampler1, v_texCoord) * 0.5;    
+      vec4 color2 = texture2D(uSampler2, v_texCoord) * 0.5;                                     
+      gl_FragColor = color1 + color2;   
+    }
   `;
 
   // Initialize a shader program; this is where all the lighting
@@ -97,7 +111,8 @@ function main() {
       textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
     },
     uniformLocations: {
-      uSampler: gl.getUniformLocation(shaderProgram, "uSampler"),
+      uSampler1: gl.getUniformLocation(shaderProgram, "uSampler1"),
+      uSampler2: gl.getUniformLocation(shaderProgram, "uSampler2"),
       width: gl.getUniformLocation(shaderProgram, "width"),
       height: gl.getUniformLocation(shaderProgram, "height")
     }
@@ -107,23 +122,20 @@ function main() {
   // objects we'll be drawing.
   const buffers = initBuffers(gl);
 
-  const texture = initTexture(gl);
+  const texture1 = initTexture(gl);
+  const texture2 = initTexture(gl);
 
-  const video = setupVideo("race.mp4");
-
-  var then = 0;
+  const video1 = setupVideo("race.mp4");
+  const video2 = setupVideo("dog.mp4");
 
   // Draw the scene repeatedly
-  function render(now) {
-    now *= 0.001; // convert to seconds
-    const deltaTime = now - then;
-    then = now;
-
+  function render() {
     if (copyVideo) {
-      updateTexture(gl, texture, video);
+      updateTexture(gl, texture1, video1);
+      updateTexture(gl, texture2, video2);
     }
 
-    drawScene(gl, programInfo, buffers, texture, deltaTime);
+    drawScene(gl, programInfo, buffers, texture1, texture2);
 
     requestAnimationFrame(render);
   }
@@ -328,7 +340,7 @@ function isPowerOf2(value) {
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, buffers, texture, deltaTime) {
+function drawScene(gl, programInfo, buffers, texture1, texture2) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
   gl.clearDepth(1.0); // Clear everything
   gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -390,14 +402,13 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 
   // Specify the texture to map onto the faces.
 
-  // Tell WebGL we want to affect texture unit 0
   gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture1);
+  gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
 
-  // Bind the texture to texture unit 0
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // Tell the shader we bound the texture to texture unit 0
-  gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, texture2);
+  gl.uniform1i(programInfo.uniformLocations.uSampler2, 1);
 
   {
     const vertexCount = 6;
