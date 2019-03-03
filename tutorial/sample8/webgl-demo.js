@@ -83,13 +83,9 @@ function main() {
     precision mediump float;                            
     varying vec2 vTextureCoord;                            
     uniform sampler2D uSampler1;                        
-    uniform sampler2D uSampler2;                         
-    uniform float width;  
-    uniform float height;                      
+    uniform sampler2D uSampler2;                      
     void main()                                         
-    {                     
-      width;
-      height;         
+    {                
       vec4 color1 = texture2D(uSampler1, vTextureCoord) * 0.5;    
       vec4 color2 = texture2D(uSampler2, vTextureCoord) * 0.5;                                     
       gl_FragColor = color1 + color2;   
@@ -98,55 +94,113 @@ function main() {
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
-  const shaderProgram = initShaderProgram(gl, vsSource, blendingFragmentShader);
+  const blendingProgram = initShaderProgram(
+    gl,
+    vsSource,
+    blendingFragmentShader
+  );
 
-  // Collect all the info needed to use the shader program.
-  // Look up which attributes our shader program is using
-  // for aVertexPosition, aVertexNormal, aTextureCoord,
-  // and look up uniform locations.
-  const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-      textureCoord: gl.getAttribLocation(shaderProgram, "aTextureCoord")
-    },
-    uniformLocations: {
-      uSampler1: gl.getUniformLocation(shaderProgram, "uSampler1"),
-      uSampler2: gl.getUniformLocation(shaderProgram, "uSampler2"),
-      width: gl.getUniformLocation(shaderProgram, "width"),
-      height: gl.getUniformLocation(shaderProgram, "height")
-    }
+  const edgeDetectProgram = initShaderProgram(
+    gl,
+    vsSource,
+    edgeDetectFragmentShader
+  );
+
+  const makeProgramInfo = (program, context, frameBuffer) => {
+    return {
+      program: program,
+      attribLocations: {
+        vertexPosition: context.getAttribLocation(program, "aVertexPosition"),
+        textureCoord: context.getAttribLocation(program, "aTextureCoord")
+      },
+      uniformLocations: {
+        uSampler1: context.getUniformLocation(program, "uSampler1"),
+        uSampler2: context.getUniformLocation(program, "uSampler2"),
+        width: context.getUniformLocation(program, "width"),
+        height: context.getUniformLocation(program, "height")
+      },
+      frameBuffer: frameBuffer
+    };
   };
+
+  const blendingProgramInfo = makeProgramInfo(blendingProgram, gl, null, null, {
+    width: canvas.width,
+    height: canvas.height
+  });
+  const frameBuffer = gl.createFramebuffer();
+  let targetTexture1;
+  let targetTexture2;
+  let size1;
+  let size2;
+  const edgeProgramInfo = makeProgramInfo(edgeDetectProgram, gl, frameBuffer);
 
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
   const buffers = initBuffers(gl);
+  const sourceTexture1 = initTexture(gl);
+  const sourceTexture2 = initTexture(gl);
 
-  const texture1 = initTexture(gl);
-  const texture2 = initTexture(gl);
-
-  const video1 = setupVideo("race.mp4");
-  const video2 = setupVideo("dog.mp4");
+  const video1 = setupVideo("race.mp4", video => {
+    targetTexture1 = createTexture(
+      gl,
+      video.videoWidth,
+      video.videoHeight,
+      null
+    );
+    size1 = { width: video.videoWidth, height: video.videoHeight };
+    console.log(size1);
+  });
+  const video2 = setupVideo("dog.mp4", video => {
+    targetTexture2 = createTexture(
+      gl,
+      video.videoWidth,
+      video.videoHeight,
+      null
+    );
+    size2 = { width: video.videoWidth, height: video.videoHeight };
+    console.log(size2);
+  });
 
   // Draw the scene repeatedly
   function render() {
-    if (copyVideo) {
-      updateTexture(gl, texture1, video1);
-      updateTexture(gl, texture2, video2);
+    if (!copyVideo || !targetTexture1 || !targetTexture2) {
+      requestAnimationFrame(render);
+      return;
     }
 
-    drawScene(gl, programInfo, buffers, texture1, texture2);
+    updateTexture(gl, sourceTexture1, video1);
+    drawToTexture(
+      gl,
+      edgeProgramInfo,
+      buffers,
+      targetTexture1,
+      sourceTexture1,
+      frameBuffer,
+      size1
+    );
+    updateTexture(gl, sourceTexture2, video2);
+    drawToTexture(
+      gl,
+      edgeProgramInfo,
+      buffers,
+      targetTexture2,
+      sourceTexture2,
+      frameBuffer,
+      size2
+    );
+    drawScene(gl, blendingProgramInfo, buffers, targetTexture1, targetTexture2);
 
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 }
 
-function setupVideo(url) {
+function setupVideo(url, setup) {
   const video = document.createElement("video");
 
   var playing = false;
   var timeupdate = false;
+  let setupCalled = false;
 
   video.autoplay = true;
   video.muted = true;
@@ -159,7 +213,7 @@ function setupVideo(url) {
     "playing",
     function() {
       playing = true;
-      checkReady();
+      checkReady(setup, video);
     },
     true
   );
@@ -168,7 +222,7 @@ function setupVideo(url) {
     "timeupdate",
     function() {
       timeupdate = true;
-      checkReady();
+      checkReady(setup, video);
     },
     true
   );
@@ -176,70 +230,29 @@ function setupVideo(url) {
   video.src = url;
   video.play();
 
-  function checkReady() {
+  function checkReady(setup, video) {
     if (playing && timeupdate) {
       copyVideo = true;
+      if (!setupCalled) {
+        setup(video);
+        setupCalled = true;
+      }
     }
   }
 
   return video;
 }
 
-//
-// initBuffers
-//
-// Initialize the buffers we'll need. For this demo, we just
-// have one object -- a simple three-dimensional cube.
-//
 function initBuffers(gl) {
-  // Create a buffer for the cube's vertex positions.
-
   const positionBuffer = gl.createBuffer();
-
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
-
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  // Now create an array of positions for the cube.
-
-  const positions = [
-    -1.0,
-    -1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    -1.0,
-    1.0,
-    1.0
-  ];
-
-  // Now pass the list of positions into WebGL to build the
-  // shape. We do this by creating a Float32Array from the
-  // JavaScript array, then use it to fill the current buffer.
-
+  const positions = [-1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0];
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  // Now set up the texture coordinates for the faces.
-
   const textureCoordBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
-  const textureCoordinates = [
-    // Front
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0
-  ];
+  const textureCoordinates = [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
 
   gl.bufferData(
     gl.ARRAY_BUFFER,
@@ -274,44 +287,44 @@ function initBuffers(gl) {
   };
 }
 
-//
-// Initialize a texture.
-//
-function initTexture(gl, url) {
+function createTexture(gl, width, height, data) {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
-  // Because video havs to be download over the internet
-  // they might take a moment until it's ready so
-  // put a single pixel in the texture so we can
-  // use it immediately.
-  const level = 0;
-  const internalFormat = gl.RGBA;
-  const width = 1;
-  const height = 1;
-  const border = 0;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    level,
-    internalFormat,
-    width,
-    height,
-    border,
-    srcFormat,
-    srcType,
-    pixel
-  );
+  {
+    // define size and format of level 0
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const border = 0;
+    const format = gl.RGBA;
+    const type = gl.UNSIGNED_BYTE;
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      width,
+      height,
+      border,
+      format,
+      type,
+      data
+    );
 
-  // Turn off mips and set  wrapping to clamp to edge so it
-  // will work regardless of the dimensions of the video.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
 
   return texture;
+}
+
+//
+// Initialize a texture.
+//
+function initTexture(gl) {
+  const pixel = new Uint8Array([0, 0, 255, 255]);
+  return createTexture(gl, 1, 1, pixel);
 }
 
 //
@@ -333,27 +346,37 @@ function updateTexture(gl, texture, video) {
   );
 }
 
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
-}
-
-//
-// Draw the scene.
-//
-function drawScene(gl, programInfo, buffers, texture1, texture2) {
+function setupContext(
+  gl,
+  programInfo,
+  buffers,
+  viewportSize,
+  frameBuffer,
+  targetTexture
+) {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+  if (targetTexture) {
+    const attachmentPoint = gl.COLOR_ATTACHMENT0;
+    const level = 0;
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      attachmentPoint,
+      gl.TEXTURE_2D,
+      targetTexture,
+      level
+    );
+  }
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
   gl.clearDepth(1.0); // Clear everything
   gl.enable(gl.DEPTH_TEST); // Enable depth testing
   gl.depthFunc(gl.LEQUAL); // Near things obscure far things
-
-  // Clear the canvas before we start drawing on it.
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.viewport(0, 0, viewportSize.width, viewportSize.height);
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
   {
-    const numComponents = 3;
+    const numComponents = 2;
     const type = gl.FLOAT;
     const normalize = false;
     const stride = 0;
@@ -392,15 +415,46 @@ function drawScene(gl, programInfo, buffers, texture1, texture2) {
 
   // Tell WebGL which indices to use to index the vertices
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
-  // Tell WebGL to use our program when drawing
-
   gl.useProgram(programInfo.program);
+}
 
-  gl.uniform1f(programInfo.uniformLocations.width, gl.canvas.width);
-  gl.uniform1f(programInfo.uniformLocations.height, gl.canvas.height);
+function drawToTexture(
+  gl,
+  programInfo,
+  buffers,
+  targetTexture,
+  sourceTexture,
+  frameBuffer,
+  size
+) {
+  setupContext(gl, programInfo, buffers, size, frameBuffer, targetTexture);
 
-  // Specify the texture to map onto the faces.
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, sourceTexture);
+  gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
+  gl.uniform1f(programInfo.uniformLocations.width, size.width);
+  gl.uniform1f(programInfo.uniformLocations.height, size.height);
+
+  {
+    const vertexCount = 6;
+    const type = gl.UNSIGNED_SHORT;
+    const offset = 0;
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+  }
+}
+
+function drawScene(gl, programInfo, buffers, texture1, texture2) {
+  setupContext(
+    gl,
+    programInfo,
+    buffers,
+    {
+      width: gl.canvas.width,
+      height: gl.canvas.height
+    },
+    null,
+    null
+  );
 
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, texture1);
