@@ -79,82 +79,49 @@ function main() {
     }     
   `;
 
-  const blendingFragmentShader = `    
+  const brightnessFragmentShader = `    
     precision mediump float;                            
     varying vec2 vTextureCoord;                            
-    uniform sampler2D uSampler1;                        
-    uniform sampler2D uSampler2;                         
-    uniform float width;  
-    uniform float height;                      
+    uniform sampler2D uSampler1;    
+    
+    uniform float shadows;
+    uniform float highlights;
+
+    const vec3 luminanceWeighting = vec3(0.3, 0.3, 0.3);
+
     void main()                                         
     {                     
-      vec4 pixel = texture2D(uSampler1, vTextureCoord);              
-      vec4 n[9];
+      vec4 source = texture2D(uSampler1, vTextureCoord);
+      float luminance = dot(source.rgb, luminanceWeighting);
 
-      float w = 1.0 / width;
-      float h = 1.0 / height;
+      //(shadows+1.0) changed to just shadows:
+      float shadow = clamp((pow(luminance, 1.0/shadows) + (-0.76)*pow(luminance, 2.0/shadows)) - luminance, 0.0, 1.0);
+      float highlight = clamp((1.0 - (pow(1.0-luminance, 1.0/(2.0-highlights)) + (-0.8)*pow(1.0-luminance, 2.0/(2.0-highlights)))) - luminance, -1.0, 0.0);
+      vec3 result = vec3(0.0, 0.0, 0.0) + ((luminance + shadow + highlight) - 0.0) * ((source.rgb - vec3(0.0, 0.0, 0.0))/(luminance - 0.0));
 
-      n[0] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 0.0) );
-      n[1] = texture2D(uSampler1, vTextureCoord + vec2(w, 0.0) );
-      n[2] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 0.0) );
-      n[3] = texture2D(uSampler1, vTextureCoord + vec2(0.0*w, h) );
-      n[4] = texture2D(uSampler1, vTextureCoord + vec2(w, h) );
-      n[5] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, h) );
-      n[6] = texture2D(uSampler1, vTextureCoord + vec2(0.0, 2.0*h) );
-      n[7] = texture2D(uSampler1, vTextureCoord + vec2(w, 2.0*h) );
-      n[8] = texture2D(uSampler1, vTextureCoord + vec2(2.0*w, 2.0*h) );
-      vec4 color1 = texture2D(uSampler1, vTextureCoord) * 0.5;    
-      vec4 color2 = texture2D(uSampler2, vTextureCoord) * 0.5;      
-      vec4 sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
-      vec4 sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
+      // blend toward white if highlights is more than 1
+      float contrastedLuminance = ((luminance - 0.5) * 1.5) + 0.5;
+      float whiteInterp = contrastedLuminance*contrastedLuminance*contrastedLuminance;
+      float whiteTarget = clamp(highlights, 1.0, 2.0) - 1.0;
+      result = mix(result, vec3(1.0), whiteInterp*whiteTarget);
 
-      float avg_x = (sobel_x.r + sobel_x.g + sobel_x.b) / 3.0;
-      float avg_y = (sobel_y.r + sobel_y.g + sobel_y.b) / 3.0;
+      // blend toward black if shadows is less than 1
+      float invContrastedLuminance = 1.0 - contrastedLuminance;
+      float blackInterp = invContrastedLuminance*invContrastedLuminance*invContrastedLuminance;
+      float blackTarget = 1.0 - clamp(shadows, 0.0, 1.0);
+      result = mix(result, vec3(0.0), blackInterp*blackTarget);
 
-      sobel_x.r = avg_x;
-      sobel_x.g = avg_x;
-      sobel_x.b = avg_x;
-      sobel_y.r = avg_y;
-      sobel_y.g = avg_y;
-      sobel_y.b = avg_y;
-
-      vec3 sobel1 = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
-
-      pixel = texture2D(uSampler2, vTextureCoord);          
-
-      n[0] = texture2D(uSampler2, vTextureCoord + vec2(0.0, 0.0) );
-      n[1] = texture2D(uSampler2, vTextureCoord + vec2(w, 0.0) );
-      n[2] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, 0.0) );
-      n[3] = texture2D(uSampler2, vTextureCoord + vec2(0.0*w, h) );
-      n[4] = texture2D(uSampler2, vTextureCoord + vec2(w, h) );
-      n[5] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, h) );
-      n[6] = texture2D(uSampler2, vTextureCoord + vec2(0.0, 2.0*h) );
-      n[7] = texture2D(uSampler2, vTextureCoord + vec2(w, 2.0*h) );
-      n[8] = texture2D(uSampler2, vTextureCoord + vec2(2.0*w, 2.0*h) );
-      color1 = texture2D(uSampler2, vTextureCoord) * 0.5;    
-      color2 = texture2D(uSampler2, vTextureCoord) * 0.5;      
-      sobel_x = n[2] + (2.0*n[5]) + n[8] - (n[0] + (2.0*n[3]) + n[6]);
-      sobel_y = n[0] + (2.0*n[1]) + n[2] - (n[6] + (2.0*n[7]) + n[8]);
-
-      avg_x = (sobel_x.r + sobel_x.g + sobel_x.b) / 3.0;
-      avg_y = (sobel_y.r + sobel_y.g + sobel_y.b) / 3.0;
-
-      sobel_x.r = avg_x;
-      sobel_x.g = avg_x;
-      sobel_x.b = avg_x;
-      sobel_y.r = avg_y;
-      sobel_y.g = avg_y;
-      sobel_y.b = avg_y;
-
-      vec3 sobel2 = vec3(sqrt((sobel_x.rgb * sobel_x.rgb) + (sobel_y.rgb * sobel_y.rgb)));
-
-      gl_FragColor = vec4(sobel1*0.5 + sobel2*0.5, 1.0);   
+      gl_FragColor = vec4(result, source.a);
     }
   `;
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
-  const shaderProgram = initShaderProgram(gl, vsSource, blendingFragmentShader);
+  const shaderProgram = initShaderProgram(
+    gl,
+    vsSource,
+    brightnessFragmentShader
+  );
 
   // Collect all the info needed to use the shader program.
   // Look up which attributes our shader program is using
@@ -168,9 +135,8 @@ function main() {
     },
     uniformLocations: {
       uSampler1: gl.getUniformLocation(shaderProgram, "uSampler1"),
-      uSampler2: gl.getUniformLocation(shaderProgram, "uSampler2"),
-      width: gl.getUniformLocation(shaderProgram, "width"),
-      height: gl.getUniformLocation(shaderProgram, "height")
+      shadows: gl.getUniformLocation(shaderProgram, "shadows"),
+      brightness: gl.getUniformLocation(shaderProgram, "brightness")
     }
   };
 
@@ -179,19 +145,16 @@ function main() {
   const buffers = initBuffers(gl);
 
   const texture1 = initTexture(gl);
-  const texture2 = initTexture(gl);
 
   const video1 = setupVideo("race.mp4");
-  const video2 = setupVideo("dog.mp4");
 
   // Draw the scene repeatedly
   function render() {
     if (copyVideo) {
       updateTexture(gl, texture1, video1);
-      updateTexture(gl, texture2, video2);
     }
 
-    drawScene(gl, programInfo, buffers, texture1, texture2);
+    drawScene(gl, programInfo, buffers, texture1);
 
     requestAnimationFrame(render);
   }
@@ -462,9 +425,8 @@ function drawScene(gl, programInfo, buffers, texture1, texture2) {
   gl.bindTexture(gl.TEXTURE_2D, texture1);
   gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
 
-  gl.activeTexture(gl.TEXTURE1);
-  gl.bindTexture(gl.TEXTURE_2D, texture2);
-  gl.uniform1i(programInfo.uniformLocations.uSampler2, 1);
+  gl.uniform1f(programInfo.uniformLocations.shadows, 2);
+  gl.uniform1f(programInfo.uniformLocations.brightness, 0.1);
 
   {
     const vertexCount = 6;
