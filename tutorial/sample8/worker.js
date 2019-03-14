@@ -1,3 +1,5 @@
+const globalSize = { width: 1920, height: 1200 };
+
 let gl;
 let texture1, texture2, buffers, programInfo;
 
@@ -308,13 +310,18 @@ function updateTexture(gl, texture, bitmap) {
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  let array = new ImageData(
+    new Uint8ClampedArray(bitmap),
+    globalSize.width,
+    globalSize.height
+  );
   gl.texImage2D(
     gl.TEXTURE_2D,
     level,
     internalFormat,
     srcFormat,
     srcType,
-    bitmap
+    array
   );
 }
 

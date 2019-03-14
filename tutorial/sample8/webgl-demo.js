@@ -1,3 +1,5 @@
+const globalSize = { width: 1920, height: 1200 };
+
 /**
  *
  * @param {number} fps
@@ -55,7 +57,7 @@ function createFrameRenderer(fps) {
   }
 
   function stop() {
-    //console.log("stopped. FPS was: ", fpsCount);
+    console.log("stopped. FPS was: ", fpsCount);
     wasStopped = true;
   }
 
@@ -79,6 +81,49 @@ function createFrameRenderer(fps) {
 let copyVideo1 = false;
 let copyVideo2 = false;
 
+const getContext = () => {
+  const canvas = document.createElement("canvas");
+  return canvas.getContext("webgl");
+};
+
+const getTexture = renderContext => {
+  const tex = renderContext.createTexture();
+  renderContext.bindTexture(renderContext.TEXTURE_2D, tex);
+  const fbo = renderContext.createFramebuffer();
+  renderContext.bindFramebuffer(renderContext.FRAMEBUFFER, fbo);
+  return tex;
+};
+
+const getImageData = (renderContext, texture, video) => {
+  renderContext.viewport(0, 0, globalSize.width, globalSize.height);
+  renderContext.framebufferTexture2D(
+    renderContext.FRAMEBUFFER,
+    renderContext.COLOR_ATTACHMENT0,
+    renderContext.TEXTURE_2D,
+    texture,
+    0
+  );
+  renderContext.texImage2D(
+    renderContext.TEXTURE_2D,
+    0,
+    renderContext.RGBA,
+    renderContext.RGBA,
+    renderContext.UNSIGNED_BYTE,
+    video
+  );
+  const typedArray = new Uint8Array(globalSize.width * globalSize.height * 4);
+  renderContext.readPixels(
+    0,
+    0,
+    globalSize.width,
+    globalSize.height,
+    renderContext.RGBA,
+    renderContext.UNSIGNED_BYTE,
+    typedArray
+  );
+  return typedArray.buffer;
+};
+
 main();
 
 //
@@ -89,6 +134,10 @@ function main() {
   const offscreen = canvas.transferControlToOffscreen();
   const worker = new Worker("./worker.js");
 
+  const context1 = getContext();
+  const context2 = getContext();
+  const texture1 = getTexture(context1);
+  const texture2 = getTexture(context2);
   const video1 = setupVideo("race.mp4", () => {
     //console.log("1 ready");
     copyVideo1 = true;
@@ -106,24 +155,16 @@ function main() {
       frameRenderer.unblock();
       return;
     }
-    let promise = Promise.all([
-      // Cut out two sprites from the sprite sheet
-      createImageBitmap(video1),
-      createImageBitmap(video2)
-    ]);
-    promise.catch(error => {
-      console.log(error);
-    });
-    promise.then(sprites => {
-      worker.postMessage(
-        {
-          render: true,
-          bitmap1: sprites[0],
-          bitmap2: sprites[1]
-        },
-        [sprites[0], sprites[1]]
-      );
-    });
+    const image1 = getImageData(context1, texture1, video1);
+    const image2 = getImageData(context2, texture2, video2);
+    worker.postMessage(
+      {
+        render: true,
+        bitmap1: image1,
+        bitmap2: image2
+      },
+      [image1, image2]
+    );
   }
 
   video1.onended = frameRenderer.stop;
