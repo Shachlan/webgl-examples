@@ -36,7 +36,7 @@ function createFrameRenderer(fps) {
     elapsed = now - then;
 
     if (elapsed <= fpsInterval || !canRender) {
-      console.log("cannot render");
+      console.log("blocked");
       requestAnimationFrame(renderFrame);
       return;
     }
@@ -59,8 +59,7 @@ function createFrameRenderer(fps) {
   }
 
   function unblock() {
-    console.log("unblock called");
-
+    console.log("unblocking");
     canRender = true;
   }
 
@@ -72,7 +71,8 @@ function createFrameRenderer(fps) {
 }
 
 // will set to true when video can be copied to texture
-var copyVideo = false;
+let copyVideo1 = false;
+let copyVideo2 = false;
 
 main();
 
@@ -84,24 +84,52 @@ function main() {
   const offscreen = canvas.transferControlToOffscreen();
   const worker = new Worker("./worker.js");
 
-  const video1 = setupVideo("race.mp4");
-  const video2 = setupVideo("dog.mp4");
+  const video1 = setupVideo("race.mp4", () => {
+    console.log("1 ready");
+    copyVideo1 = true;
+  });
+  const video2 = setupVideo("dog.mp4", () => {
+    console.log("2 ready");
+    copyVideo2 = true;
+  });
+  let frameRenderer = createFrameRenderer(30);
 
   // Draw the scene repeatedly
   function render() {
-    worker.postMessage({ render: true });
+    if (!copyVideo1 || !copyVideo2) {
+      console.log("early leaving: ", copyVideo1, " , ", copyVideo2);
+      frameRenderer.unblock();
+      return;
+    }
+    let promise = Promise.all([
+      // Cut out two sprites from the sprite sheet
+      createImageBitmap(video1),
+      createImageBitmap(video2)
+    ]);
+    promise.catch(error => {
+      console.log(error);
+    });
+    promise.then(sprites => {
+      worker.postMessage(
+        {
+          render: true,
+          bitmap1: sprites[0],
+          bitmap2: sprites[1]
+        },
+        [sprites[0], sprites[1]]
+      );
+    });
   }
 
-  let frameRenderer = createFrameRenderer(30);
   video1.onended = frameRenderer.stop;
   video2.onended = frameRenderer.stop;
   frameRenderer.render(render);
   worker.onmessage = frameRenderer.unblock;
 
-  worker.postMessage({ canvas: offscreen }, [offscreen, video1, video2]);
+  worker.postMessage({ canvas: offscreen }, [offscreen]);
 }
 
-function setupVideo(url) {
+function setupVideo(url, completion) {
   const video = document.createElement("video");
 
   var playing = false;
@@ -137,7 +165,7 @@ function setupVideo(url) {
 
   function checkReady() {
     if (playing && timeupdate) {
-      copyVideo = true;
+      completion();
     }
   }
 

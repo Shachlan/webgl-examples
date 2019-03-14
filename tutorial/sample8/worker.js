@@ -456,13 +456,11 @@ function loadShader(gl, type, source) {
 
 onmessage = function(content) {
   if (content.data.render) {
-    console.log("worker render");
     updateTexture(gl, texture1, content.data.bitmap1);
     updateTexture(gl, texture2, content.data.bitmap1);
     drawScene(gl, programInfo, buffers, texture1, texture2);
     postMessage({});
   } else {
-    console.log("worker setup");
     setup(content.data.canvas);
     postMessage({});
   }
