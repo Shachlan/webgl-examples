@@ -457,7 +457,7 @@ function loadShader(gl, type, source) {
 onmessage = function(content) {
   if (content.data.render) {
     updateTexture(gl, texture1, content.data.bitmap1);
-    updateTexture(gl, texture2, content.data.bitmap1);
+    updateTexture(gl, texture2, content.data.bitmap2);
     drawScene(gl, programInfo, buffers, texture1, texture2);
     postMessage({});
   } else {

@@ -5,6 +5,7 @@
 function createFrameRenderer(fps) {
   let wasStopped = false;
   let canRender = false;
+  let shouldBlock = false;
   let frameCount = 0;
   const fpsInterval = 1000 / fps;
   let now, elapsed;
@@ -35,8 +36,8 @@ function createFrameRenderer(fps) {
     now = performance.now();
     elapsed = now - then;
 
-    if (elapsed <= fpsInterval || !canRender) {
-      console.log("blocked");
+    if (elapsed <= fpsInterval || (!canRender && shouldBlock)) {
+      //console.log("blocked");
       requestAnimationFrame(renderFrame);
       return;
     }
@@ -54,13 +55,17 @@ function createFrameRenderer(fps) {
   }
 
   function stop() {
-    console.log("stopped. FPS was: ", fpsCount);
+    //console.log("stopped. FPS was: ", fpsCount);
     wasStopped = true;
   }
 
   function unblock() {
-    console.log("unblocking");
+    //console.log("unblocking");
     canRender = true;
+  }
+
+  function startBlocking() {
+    shouldBlock = true;
   }
 
   return {
@@ -85,11 +90,11 @@ function main() {
   const worker = new Worker("./worker.js");
 
   const video1 = setupVideo("race.mp4", () => {
-    console.log("1 ready");
+    //console.log("1 ready");
     copyVideo1 = true;
   });
   const video2 = setupVideo("dog.mp4", () => {
-    console.log("2 ready");
+    //console.log("2 ready");
     copyVideo2 = true;
   });
   let frameRenderer = createFrameRenderer(30);
@@ -97,7 +102,7 @@ function main() {
   // Draw the scene repeatedly
   function render() {
     if (!copyVideo1 || !copyVideo2) {
-      console.log("early leaving: ", copyVideo1, " , ", copyVideo2);
+      //console.log("early leaving: ", copyVideo1, " , ", copyVideo2);
       frameRenderer.unblock();
       return;
     }
