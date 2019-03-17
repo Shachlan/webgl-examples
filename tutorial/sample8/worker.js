@@ -404,6 +404,10 @@ function drawScene(gl, programInfo, buffers, texture1, texture2) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
+
+  requestAnimationFrame(() => {
+    postMessage({});
+  });
 }
 
 //
@@ -466,7 +470,6 @@ onmessage = function(content) {
     updateTexture(gl, texture1, content.data.bitmap1);
     updateTexture(gl, texture2, content.data.bitmap2);
     drawScene(gl, programInfo, buffers, texture1, texture2);
-    postMessage({});
   } else {
     setup(content.data.canvas);
     postMessage({});
