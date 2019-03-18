@@ -1,0 +1,15 @@
+{
+  "name": "sample8",
+  "version": "1.0.0",
+  "description": "",
+  "main": "webgl-demo.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "webm-wasm": "^0.4.1"
+  }
+}

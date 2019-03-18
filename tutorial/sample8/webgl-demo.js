@@ -1,3 +1,5 @@
+let globalSize = { width: 1920, height: 1200 };
+
 /**
  *
  * @param {number} fps
@@ -51,22 +53,32 @@ function createFrameRenderer(fps) {
     console.log("stopped. FPS was: ", fpsCount);
     wasStopped = true;
   }
+  function isStopped() {
+    return wasStopped;
+  }
 
   return {
     render,
-    stop
+    stop,
+    isStopped
   };
 }
 
 // will set to true when video can be copied to texture
 var copyVideo = false;
 
-main();
+const worker = new Worker("webm-worker.js");
+
+function nextEvent(target, name) {
+  return new Promise(resolve => {
+    target.addEventListener(name, resolve, { once: true });
+  });
+}
 
 //
 // Start here
 //
-function main() {
+const main = async () => {
   const canvas = document.querySelector("#glcanvas");
   const gl = canvas.getContext("webgl");
 
@@ -234,6 +246,14 @@ function main() {
     }
   };
 
+  worker.postMessage("./webm-wasm.wasm");
+  await nextEvent(worker, "message");
+  worker.postMessage({
+    width: globalSize.width,
+    height: globalSize.height
+    // ... more constructor options below
+  });
+
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
   const buffers = initBuffers(gl);
@@ -245,20 +265,73 @@ function main() {
   const video2 = setupVideo("dog.mp4");
 
   // Draw the scene repeatedly
-  function render() {
+  const render = async () => {
     if (copyVideo) {
       updateTexture(gl, texture1, video1);
       updateTexture(gl, texture2, video2);
     }
 
     drawScene(gl, programInfo, buffers, texture1, texture2);
-  }
+    const typedArray = new Uint8Array(globalSize.width * globalSize.height * 4);
+    gl.readPixels(
+      0,
+      0,
+      globalSize.width,
+      globalSize.height,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      typedArray
+    );
+
+    const clampedArray = new Uint8ClampedArray(typedArray);
+    const imageData = new ImageData(
+      clampedArray,
+      globalSize.width,
+      globalSize.height
+    );
+
+    let buffer = imageData.data.buffer;
+    worker.postMessage(buffer, [buffer]);
+  };
+
+  const stop = async () => {
+    if (frameRenderer.isStopped()) {
+      return;
+    }
+    console.log("stopping");
+    frameRenderer.stop();
+    let then = performance.now();
+    worker.postMessage(null);
+
+    let conclusion = nextEvent(worker, "message");
+    conclusion.catch(err => {
+      console.log("error:", err);
+    });
+    conclusion.then(result => {
+      let now = performance.now();
+      console.log("result. Took: ", now - then);
+      const webm = result.data;
+      const blob = new Blob([webm], { type: "video/webm" });
+      const url = URL.createObjectURL(blob);
+
+      const video = document.createElement("video");
+      video.muted = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.controls = true;
+      video.src = url;
+      document.body.append(video);
+      video.play();
+    });
+  };
 
   let frameRenderer = createFrameRenderer(30);
-  video1.onended = frameRenderer.stop;
-  video2.onended = frameRenderer.stop;
+  video1.onended = stop;
+  video2.onended = stop;
   frameRenderer.render(render);
-}
+};
+
+main();
 
 function setupVideo(url) {
   const video = document.createElement("video");
@@ -449,10 +522,6 @@ function updateTexture(gl, texture, video) {
     srcType,
     video
   );
-}
-
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
 }
 
 //

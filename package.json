@@ -1,0 +1,22 @@
+{
+  "name": "webgl-examples",
+  "version": "1.0.0",
+  "description": "* Main page: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shachlan/webgl-examples.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Shachlan/webgl-examples/issues"
+  },
+  "homepage": "https://github.com/Shachlan/webgl-examples#readme"
+}
