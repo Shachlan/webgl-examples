@@ -250,9 +250,32 @@ const main = async () => {
   await nextEvent(worker, "message");
   worker.postMessage({
     width: globalSize.width,
-    height: globalSize.height
+    height: globalSize.height,
+    //bitrate: 400
+    realtime: true
     // ... more constructor options below
   });
+
+  const mediaSource = new MediaSource();
+  mediaSource.onsourceopen = () => {
+    const sourceBuffer = mediaSource.addSourceBuffer(
+      `video/webm; codecs="vp8"`
+    );
+    worker.onmessage = ev => {
+      if (!ev.data) {
+        return mediaSource.endOfStream();
+      }
+      sourceBuffer.appendBuffer(ev.data);
+    };
+  };
+  const video = document.createElement("video");
+  video.muted = true;
+  video.autoplay = true;
+  video.loop = true;
+  video.controls = true;
+  video.src = URL.createObjectURL(mediaSource);
+  document.body.append(video);
+  video.play();
 
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
@@ -302,27 +325,6 @@ const main = async () => {
     frameRenderer.stop();
     let then = performance.now();
     worker.postMessage(null);
-
-    let conclusion = nextEvent(worker, "message");
-    conclusion.catch(err => {
-      console.log("error:", err);
-    });
-    conclusion.then(result => {
-      let now = performance.now();
-      console.log("result. Took: ", now - then);
-      const webm = result.data;
-      const blob = new Blob([webm], { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-
-      const video = document.createElement("video");
-      video.muted = true;
-      video.autoplay = true;
-      video.loop = true;
-      video.controls = true;
-      video.src = url;
-      document.body.append(video);
-      video.play();
-    });
   };
 
   let frameRenderer = createFrameRenderer(30);
