@@ -9,7 +9,7 @@ function createFrameRenderer(fps) {
   let now, elapsed;
   let then = performance.now();
   let startTime = then;
-  let count,
+  let count = 0,
     seconds = 0;
   let drawCallback = () => {
     throw new Error("no draw callback provided!");
@@ -48,7 +48,17 @@ function createFrameRenderer(fps) {
     requestAnimationFrame(renderFrame);
   }
   function stop() {
-    console.log("stopped. FPS was: ", fpsCount);
+    let sum = fpsCount.reduce((a, b) => {
+      return a + b;
+    });
+    let average = sum / fpsCount.length;
+    console.log(
+      "stopped. average FPS was: ",
+      average,
+      " for: ",
+      fpsCount.length,
+      " frames"
+    );
     wasStopped = true;
   }
 
