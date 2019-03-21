@@ -295,49 +295,34 @@ function initBuffers(gl) {
 
   // Now create an array of positions for the cube.
 
-  const positions = [
-    -1.0,
-    -1.0,
-    1.0,
-    1.0,
+  const vertices = [
     -1.0,
     1.0,
-    1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0,
+    -1.0,
+    0.0,
+    0.0,
     1.0,
     1.0,
     -1.0,
+    0.0,
     1.0,
-    1.0
+    1.0,
+    1.0,
+    1.0,
+    0.0,
+    1.0,
+    0.0
   ];
 
   // Now pass the list of positions into WebGL to build the
   // shape. We do this by creating a Float32Array from the
   // JavaScript array, then use it to fill the current buffer.
 
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  // Now set up the texture coordinates for the faces.
-
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-
-  const textureCoordinates = [
-    // Front
-    1.0,
-    1.0,
-    0.0,
-    1.0,
-    0.0,
-    0.0,
-    1.0,
-    0.0
-  ];
-
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(textureCoordinates),
-    gl.STATIC_DRAW
-  );
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
   // Build the element array buffer; this specifies the indices
   // into the vertex arrays for each face's vertices.
@@ -361,7 +346,6 @@ function initBuffers(gl) {
 
   return {
     position: positionBuffer,
-    textureCoord: textureCoordBuffer,
     indices: indexBuffer
   };
 }
@@ -435,45 +419,33 @@ function finalInit(gl, texture, programInfo, buffers) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Tell WebGL how to pull out the positions from the position
-  // buffer into the vertexPosition attribute
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-    gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexPosition,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset
-    );
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-  }
+  let numComponents = 3;
+  const type = gl.FLOAT;
+  const normalize = false;
+  const stride = 20;
+  let offset = 0;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.vertexPosition,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset
+  );
 
-  // Tell WebGL how to pull out the texture coordinates from
-  // the texture coordinate buffer into the textureCoord attribute.
-  {
-    const numComponents = 2;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
-    gl.vertexAttribPointer(
-      programInfo.attribLocations.textureCoord,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset
-    );
-    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
-  }
+  numComponents = 2;
+  offset = 12;
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.textureCoord,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset
+  );
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+  gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
 
   // Tell WebGL which indices to use to index the vertices
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
