@@ -206,14 +206,17 @@ function main() {
 
   const texture1 = initTexture(gl);
 
+  finalInit(gl, texture1, programInfo, buffers);
+
   const video1 = setupVideo("dog.mp4");
   // Draw the scene repeatedly
   function render() {
-    if (copyVideo) {
-      updateTexture(gl, texture1, video1);
+    if (!copyVideo) {
+      return;
     }
+    updateTexture(gl, texture1, video1);
 
-    drawScene(gl, programInfo, buffers, texture1);
+    drawScene(gl);
   }
 
   let frameRenderer = createFrameRenderer(30);
@@ -412,14 +415,7 @@ function updateTexture(gl, texture, video) {
   );
 }
 
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
-}
-
-//
-// Draw the scene.
-//
-function drawScene(gl, programInfo, buffers, texture1, texture2) {
+function finalInit(gl, texture, programInfo, buffers) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
   gl.clearDepth(1.0); // Clear everything
   gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -482,18 +478,21 @@ function drawScene(gl, programInfo, buffers, texture1, texture2) {
   // Specify the texture to map onto the faces.
 
   gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, texture1);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
 
   gl.uniform1f(programInfo.uniformLocations.shadows, 2);
   gl.uniform1f(programInfo.uniformLocations.brightness, 0.1);
+}
 
-  {
-    const vertexCount = 6;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
+//
+// Draw the scene.
+//
+function drawScene(gl) {
+  const vertexCount = 6;
+  const type = gl.UNSIGNED_SHORT;
+  const offset = 0;
+  gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 }
 
 //
