@@ -206,6 +206,15 @@ function main() {
 
   const texture1 = initTexture(gl);
 
+  const stop = () => {
+    frameRenderer.stop();
+    sum = timingArray.reduce(function(a, b) {
+      return a + b;
+    });
+    avg = sum / timingArray.length;
+    console.log("average update time: ", avg);
+  };
+
   const video1 = setupVideo("dog.mp4");
   // Draw the scene repeatedly
   function render() {
@@ -217,7 +226,7 @@ function main() {
   }
 
   let frameRenderer = createFrameRenderer(30);
-  video1.onended = frameRenderer.stop;
+  video1.onended = stop;
   frameRenderer.render(render);
 }
 
@@ -263,6 +272,8 @@ function setupVideo(url) {
 
   return video;
 }
+
+const timingArray = [];
 
 //
 // initBuffers
@@ -401,6 +412,7 @@ function updateTexture(gl, texture, video) {
   const internalFormat = gl.RGBA;
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
+  const then = performance.now();
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(
     gl.TEXTURE_2D,
@@ -410,10 +422,8 @@ function updateTexture(gl, texture, video) {
     srcType,
     video
   );
-}
-
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
+  const now = performance.now();
+  timingArray.push(now - then);
 }
 
 //
