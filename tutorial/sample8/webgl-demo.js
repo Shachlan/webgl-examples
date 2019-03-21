@@ -414,6 +414,7 @@ function updateTexture(gl, texture, video) {
   const srcType = gl.UNSIGNED_BYTE;
   const then = performance.now();
   gl.bindTexture(gl.TEXTURE_2D, texture);
+
   gl.texImage2D(
     gl.TEXTURE_2D,
     level,
@@ -422,6 +423,21 @@ function updateTexture(gl, texture, video) {
     srcType,
     video
   );
+  fb = gl.createFramebuffer();
+  // make this the current frame buffer
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+  // attach the texture to the framebuffer.
+  gl.framebufferTexture2D(
+    gl.FRAMEBUFFER,
+    gl.COLOR_ATTACHMENT0,
+    gl.TEXTURE_2D,
+    texture,
+    0
+  );
+  const typedArray = new Uint8Array(1920 * 1200 * 4);
+  gl.readPixels(0, 0, 1920, 1200, gl.RGBA, gl.UNSIGNED_BYTE, typedArray);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   const now = performance.now();
   timingArray.push(now - then);
 }
